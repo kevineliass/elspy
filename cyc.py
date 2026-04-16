@@ -16,7 +16,7 @@ def listen():
             break
         conn.send(comando.encode())
         respuesta = conn.recv(1024 * 10).decode()
-        print(json.loads(respuesta))
+        print(respuesta)
     
     conn.close()
 
